@@ -3,33 +3,44 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from paddleocr import PaddleOCR
+import paddle 
 
 class FormFiller:
     def __init__(self):
         # 初始化OCR，使用兼容的参数配置
         self.ocr = PaddleOCR(
             use_textline_orientation=True,  # 替换已废弃的use_angle_cls
-            lang="ch",
-            use_gpu=False,
-            enable_mkldnn=False  # 禁用MKLDNN加速
+            lang="ch"
         )
         
+        # self.ocr = PaddleOCR(
+        #     use_doc_orientation_classify=False,
+        #     use_doc_unwarping=False,
+        #     use_textline_orientation=False)
+
         # 设置字体（MacOS示例）
         try:
             self.font = ImageFont.truetype("/System/Library/Fonts/PingFang.ttc", 18)
         except:
             self.font = ImageFont.load_default()
     
+
     def recognize_text_and_tables(self, image_path):
         """识别文字内容和表格结构"""
-        result = self.ocr.ocr(image_path, cls=True)
-        
+        result = self.ocr.predict([image_path]) # 可支持多张
+        print("len(result):", len(result)) 
         # 解析OCR结果
         text_data = []
         table_boxes = []
         
+        for res in result:
+            res.print()
+            res.save_to_img("/home/orange/orangeai/FormGPT/Output/output_img")
+            res.save_to_json("/home/orange/orangeai/FormGPT/Output/output_json")
+
+
         if result and len(result) > 0:
-            for line in result[0]:
+            for line in result:
                 if line and len(line) >= 2:
                     # 提取文本和位置信息
                     text_info = {
@@ -100,7 +111,7 @@ if __name__ == "__main__":
     filler = FormFiller()
     
     # 表单模板路径
-    template_path = "form_template.png"
+    template_path = "/home/orange/orangeai/FormGPT/Output/page_1.png"
     
     # 要填写的数据（键为识别到的字段名或部分内容）
     form_data = {
@@ -112,29 +123,7 @@ if __name__ == "__main__":
     }
     
     # 输出路径
-    output_path = "filled_form.png"
+    output_path = "/Users/orange/orangeai/FormGPT/Output/filled_form.png"
     
     # 填写并保存表单
     filler.fill_form(template_path, form_data, output_path)
-
-if __name__ == "__main__":
-    # 初始化表单填写器
-    filler = FormFiller()
-    
-    # 表单模板路径
-    template_path = "/Users/orange/code/FormGPT/Output/page_1.png"
-    
-    # 要填写的数据（键为识别到的字段名或部分内容）
-    form_data = {
-        "姓名": "张三",
-        "性别": "男",
-        "年龄": "28",
-        "联系电话": "13800138000",
-        "地址": "北京市海淀区"
-    }
-    
-    # 输出路径
-    output_path = "/Users/orange/code/FormGPT/Output/filled_form.png"
-    
-    # 填写并保存表单
-    filler.fill_table(template_path, form_data, output_path)
